@@ -21,7 +21,7 @@ jobs:
         # 步驟 3：安裝套件
       - name: Install dependencies
         run: pip install -r requirements.txt
-
+        run: pip install --upgrade pip
       # 步驟 4：執行爬蟲
       - name: Run scraper
         run: python scraper/scraper.py
