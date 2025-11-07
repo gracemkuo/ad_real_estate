@@ -24,7 +24,7 @@ Easily compare Project against others in their peer group.
 def load_data(file_path: str):
     df = pd.read_excel(file_path)
     orig_len = len(df)
-    print(f"📊 Raw rows: {orig_len:,}\n")
+    print(f"📊 原始資料：{orig_len:,} 筆\n")
     
     # 基本文字正規化
     for c in ["Project", "Community", "District"]:
@@ -49,8 +49,8 @@ def load_data(file_path: str):
     df = df[df["Registration"].notna()].copy()
     deleted = before_len - len(df)
     if deleted > 0:
-        print(f"❌ Step 1: Removed records without Registration date")
-        print(f"   Deleted: {deleted:,} | Remaining: {len(df):,}\n")
+        print(f"❌ 步驟 1：移除沒日期的記錄")
+        print(f"   刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆\n")
 
     # 重要：先刪除 Price 或 Sold Area 任一為空的記錄（才能計算 Rate）
     if ("Price (AED)" in df.columns) and ("Sold Area / GFA (sqm)" in df.columns):
@@ -58,8 +58,8 @@ def load_data(file_path: str):
         df = df[df["Price (AED)"].notna() & df["Sold Area / GFA (sqm)"].notna()]
         deleted = before_len - len(df)
         if deleted > 0:
-            print(f"❌ Step 2: Remove records with missing Price or Sold Area")
-            print(f"   Deleted: {deleted:,} | Remaining: {len(df):,}\n")
+            print(f"❌ 步驟 2：移除 Price 或 Sold Area 任一為空的記錄")
+            print(f"   刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆\n")
     
     # Share 欄位過濾：只保留 Share = 1 (100%)
     if "Share" in df.columns:
@@ -67,8 +67,8 @@ def load_data(file_path: str):
         df = df[df["Share"] == 1]
         deleted = before_len - len(df)
         if deleted > 0:
-            print(f"❌ Step 3: Keep only Share = 1 records")
-            print(f"   Deleted: {deleted:,} | Remaining: {len(df):,}\n")
+            print(f"❌ 步驟 3：只保留 Share = 1 的記錄")
+            print(f"   刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆\n")
         
     # 移除非正數（<=0）的關鍵數值
     for c in ["Sold Area / GFA (sqm)", "Plot Area (sqm)", "Rate (AED/sqm)", "Price (AED)"]:
@@ -77,8 +77,8 @@ def load_data(file_path: str):
             df = df[(df[c].isna()) | (df[c] > 0)]
             deleted = before_len - len(df)
             if deleted > 0:
-                print(f"❌ Step 4: Remove non-positive values in {c}")
-                print(f"   Deleted: {deleted:,} | Remaining: {len(df):,}\n")
+                print(f"❌ 步驟 4：移除非正數的 {c}")
+                print(f"   刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆\n")
     
     # 移除 Project 屬於 Private 的列
     if "Project" in df.columns:
@@ -86,8 +86,8 @@ def load_data(file_path: str):
         df = df[~df["Project"].astype(str).str.contains("Private", case=False, na=False)]
         deleted = before_len - len(df)
         if deleted > 0:
-            print(f"❌ Step 5: Remove rows where Project is Private")
-            print(f"   Deleted: {deleted:,} | Remaining: {len(df):,}\n")
+            print(f"❌ 步驟 5：移除 Project 屬於 Private 的列")
+            print(f"   刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆\n")
     
     # --- 新增：自動計算 Rate (AED/sqm) ---
     # 現在 Price 和 Sold Area 都保證有值，可以安心計算
@@ -107,9 +107,9 @@ def load_data(file_path: str):
             # 輸出不匹配的記錄統計
             mismatch_count = (~df["Rate_Match"]).sum()
             if mismatch_count > 0:
-                print(f"⚠️  Warning: Rate validation")
-                print(f"   Found {mismatch_count:,} records with mismatched Rate")
-                print(f"   Mismatch rate: {mismatch_count/len(df)*100:.2f}%\n")
+                print(f"⚠️  警告：Rate 驗證")
+                print(f"   發現 {mismatch_count:,} 筆 Rate 不匹配的記錄")
+                print(f"   不匹配率：{mismatch_count/len(df)*100:.2f}%\n")
         else:
             # 如果原本沒有 Rate 欄位，用計算結果填入
             df["Rate (AED/sqm)"] = df["Rate_Calculated"]
@@ -143,7 +143,7 @@ def load_data(file_path: str):
             break
 
     if _group_col:
-        print(f"🔍 Step 6: Outlier removal (grouped by {_group_col}, k=3.0)")
+        print(f"🔍 步驟 6：去極值分析（使用 {_group_col} 分組，k=3.0）")
         
         if "Rate (AED/sqm)" in df.columns:
             before_len = len(df)
@@ -153,8 +153,8 @@ def load_data(file_path: str):
             # 刪除每個 Project 中 Rate 異常高或異常低的記錄
             deleted = before_len - len(df)
             if deleted > 0:
-                print(f"   ❌ Remove outliers in Rate (AED/sqm)")
-                print(f"      Deleted: {deleted:,} | Remaining: {len(df):,}")
+                print(f"   ❌ 移除 Rate (AED/sqm) 極值")
+                print(f"      刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆")
         
         if "Price (AED)" in df.columns:
             before_len = len(df)
@@ -163,18 +163,18 @@ def load_data(file_path: str):
             # 刪除每個 Project 中 Price 異常高或異常低的記錄
             deleted = before_len - len(df)
             if deleted > 0:
-                print(f"   ❌ Remove outliers in Price (AED)")
-                print(f"      Deleted: {deleted:,} | Remaining: {len(df):,}")
+                print(f"   ❌ 移除 Price (AED) 極值")
+                print(f"      刪除：{deleted:,} 筆 | 剩餘：{len(df):,} 筆")
         
         print()
     
     cleaned_len = len(df)
     total_deleted = orig_len - cleaned_len
     print("="*50)
-    print(f"✅ Data cleaning completed")
-    print(f"   Original: {orig_len:,} rows")
-    print(f"   Deleted: {total_deleted:,} ({total_deleted/orig_len*100:.2f}%)")
-    print(f"   Kept: {cleaned_len:,} ({cleaned_len/orig_len*100:.2f}%)")
+    print(f"✅ 資料清理完成")
+    print(f"   原始：{orig_len:,} 筆")
+    print(f"   刪除：{total_deleted:,} 筆（{total_deleted/orig_len*100:.2f}%）")
+    print(f"   保留：{cleaned_len:,} 筆（{cleaned_len/orig_len*100:.2f}%）")
     print("="*50)
     print()
     
@@ -182,7 +182,7 @@ def load_data(file_path: str):
     if "Rate_Match" in df.columns:
         match_count = df["Rate_Match"].sum()
         match_rate = match_count / len(df) * 100 if len(df) > 0 else 0
-        print(f"✓ Rate validation: {match_count:,} records matched (error < 1%, match rate {match_rate:.2f}%)\n")
+        print(f"✓ Rate 驗證結果：{match_count:,} 筆記錄匹配（誤差 < 1%，匹配率 {match_rate:.2f}%）\n")
     
     # 保存資料（確保有驗證欄位用於後續檢查）
     df.to_csv("data/processed_data.csv", index=False, encoding='utf-8-sig')
@@ -194,11 +194,11 @@ DATA_PATH = "data/data.xlsx"
 try:
     df, stats = load_data(DATA_PATH)
 except Exception as e:
-    st.error(f"Failed to read file: {e}")
+    st.error(f"讀取檔案失敗：{e}")
     st.stop()
 
 if df.empty:
-    st.warning("Dataframe is empty. Please check the Excel file.")
+    st.warning("資料為空，請確認 Excel 檔內容。")
     st.stop()
 
 # =========================
@@ -208,37 +208,37 @@ left, right = st.columns([1, 3])
 
 # 左側控制欄位（資料概覽與參數設定）
 with left:
-    st.markdown("### Data overview")
-    st.caption(f"Rows: {len(df):,}, Period: {df['Registration'].min().date()} → {df['Registration'].max().date()}")
+    st.markdown("### 資料來源概覽")
+    st.caption(f"筆數：{len(df):,}，期間：{df['Registration'].min().date()} → {df['Registration'].max().date()}")
 
     group_dim = st.selectbox(
-        "Peer group dimension",
+        "同儕群組維度",
         options=["Community", "Project", "District"],
         index=1
     )
 
     metric = st.selectbox(
-        "Metric",
+        "分析指標",
         options=["Rate (AED/sqm)", "Price (AED)"],
         index=0,
-        help="Default: price per sqm; switch to total price for comparison."
+        help="預設使用每平方公尺單價；也可切換為交易總價做對比。"
     )
 
     agg_fn_name = st.selectbox(
-        "Aggregation",
+        "聚合方式",
         options=["median", "mean"],
         index=0,
-        help="Aggregate monthly transactions per group (median is more robust to outliers)."
+        help="每月對群組內多筆交易做聚合（常用 median 抗離群值）。"
     )
 
     freq = st.selectbox(
-        "Time frequency",
+        "時間頻率",
         options=["Monthly", "Quarterly"],
         index=0
     )
 
     horizon_label = st.pills(
-        "Time window",
+        "時間視窗",
         options=["3M", "6M", "1Y", "3Y", "5Y", "Max"],
         default="1Y",
     )
@@ -294,7 +294,7 @@ agg_ts = agg_ts[(agg_ts["Date"] >= start_date) & (agg_ts["Date"] <= end_date)]
 # 4) 右側頂部：選擇群組與指標顯示
 # =========================
 with right:
-    st.markdown(f"### Select {group_dim} to compare")
+    st.markdown(f"### 選擇要對比的 {group_dim}")
 
     # 依期間內群組名稱字母排序，便於挑選
     sub_df = df[(df["Registration"] >= start_date) & (df["Registration"] <= end_date)]
@@ -330,14 +330,14 @@ with right:
             # ]
 
     picked_groups = st.multiselect(
-        f"Pick {group_dim} to compare",
+        f"選擇要對比的 {group_dim}",
         options=options,
         default=default_pick,
-        placeholder=f"Type or select a {group_dim} name"
+        placeholder=f"輸入或選擇 {group_dim} 名稱"
     )
 
     if not picked_groups:
-        st.info("Please pick at least one group.")
+        st.info("請至少選一個群組。")
         st.stop()
 
 # =========================
@@ -353,10 +353,10 @@ with right:
     picked_groups = [g for g in picked_groups if g in pivot.columns]
 
     if len(picked_groups) == 0:
-        st.error("The selected groups have no data in the current window.")
+        st.error("選擇的群組在目前時間窗內沒有資料。")
         st.stop()
     if missing:
-        st.warning(f"No data for the following groups in the current window; ignored: {', '.join(missing)}")
+        st.warning(f"以下群組在目前時間窗內無資料，已忽略：{', '.join(missing)}")
 
     sub = pivot[picked_groups].dropna(how="all")
     # 去掉全是 NaN 的列
@@ -383,22 +383,22 @@ with right:
         worst_name = latest_vals.idxmin()
         worst_val = latest_vals.min()
 
-        st.markdown("### Relative performance over window (base=1)")
+        st.markdown("### 期間相對表現（起點=1）")
         c1, c2 = st.columns(2)
-        c1.metric("Top group", best_name, delta=f"{round((best_val - 1) * 100)}%")
-        c2.metric("Weakest group", worst_name, delta=f"{round((worst_val - 1) * 100)}%")
+        c1.metric("最佳群組", best_name, delta=f"{round((best_val - 1) * 100)}%")
+        c2.metric("最弱群組", worst_name, delta=f"{round((worst_val - 1) * 100)}%")
 
     st.caption("""
-    - How to read: normalization=1 is window start; final value 1.25 ≈ +25% over the window.
-    - Tip: prefer `Rate (AED/sqm)` with `median` to reduce luxury outlier skew.
-    - For a stricter peer set: filter by the same `District` or `Property Type`.
+    - 指標解讀：正規化=1 表示期間起點；最後值 1.25 ≈ 期間累計 +25%。
+    - 建議優先用 `Rate (AED/sqm)` + `median`，可減少豪宅極值對平均的干擾。
+    - 想做更嚴謹「同儕集」：可改為同區 `District` 或同產品型別 `Property Type` 的子集合。
     """)
 
 # =========================
 # 6) 右側中段：總覽圖（正規化折線）
 # =========================
 with right:
-    st.markdown("## Normalized trend (base=1)")
+    st.markdown("## 正規化走勢（起點=1）")
     chart_df = normalized.reset_index().melt(id_vars="Date", var_name=group_dim, value_name="Normalized")
     fig = px.line(
         chart_df, x="Date", y="Normalized", color=group_dim,
@@ -414,7 +414,7 @@ with right:
 # =========================
 with right:
     if len(picked_groups) >= 2:
-        st.markdown("## Each group vs peer average")
+        st.markdown("## 個別群組 vs 同儕平均")
         grid_cols = st.columns(4)
 
         for i, gname in enumerate(picked_groups):
@@ -458,21 +458,21 @@ with right:
             fig2.update_yaxes(zeroline=True, zerolinewidth=1)
             grid_cols[(i * 2 + 1) % 4].plotly_chart(fig2, use_container_width=True)
     else:
-        st.info("Select at least 2 groups to view vs peer average and delta.")
+        st.info("要看 vs 同儕平均與 Delta，請至少選 2 個群組。")
 
 # =========================
 # 8) 原始/聚合資料
 # =========================
 # with st.expander("查看聚合後的時序資料", expanded=False):
 #     st.dataframe(pivot, use_container_width=True)
-with st.expander("View raw data (cleaned)", expanded=False):
+with st.expander("查看原始資料（經清洗）", expanded=False):
     # 清理統計顯示
     if isinstance(stats, dict) and all(k in stats for k in ("orig_len", "deleted", "cleaned_len")) and stats["orig_len"]:
         st.code(
             f"""
-               Original: {stats['orig_len']:,} rows
-               Deleted: {stats['deleted']:,} ({stats['deleted']/stats['orig_len']*100:.2f}%)
-               Kept: {stats['cleaned_len']:,} ({stats['cleaned_len']/stats['orig_len']*100:.2f}%)
+               原始：{stats['orig_len']:,} 筆
+               刪除：{stats['deleted']:,} 筆（{stats['deleted']/stats['orig_len']*100:.2f}%）
+               保留：{stats['cleaned_len']:,} 筆（{stats['cleaned_len']/stats['orig_len']*100:.2f}%）
             """,
             language="text",
         )
