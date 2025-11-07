@@ -1,0 +1,27 @@
+name: Daily Web Scraper
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 每天早上 8 點執行（UTC 時間）
+  workflow_dispatch:     # 允許手動觸發
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+        # 步驟 1：檢出 repo 程式碼
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+        # 步驟 2：設定 Python 環境
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+        # 步驟 3：安裝套件
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 步驟 4：執行爬蟲
+      - name: Run scraper
+        run: python scraper/scraper.py
