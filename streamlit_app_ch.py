@@ -407,7 +407,7 @@ with right:
     )
     fig.update_yaxes(title=None)
     fig.update_xaxes(title=None)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 # =========================
 # 7) 右側底部：個別 vs 同儕平均 + Delta（minus peer average）
@@ -438,7 +438,7 @@ with right:
             )
             fig1.update_yaxes(title=None, rangemode="tozero")
             fig1.update_xaxes(title=None)
-            grid_cols[(i * 2) % 4].plotly_chart(fig1, use_container_width=True)
+            grid_cols[(i * 2) % 4].plotly_chart(fig1, width='stretch')
 
             # (b) Delta：該群組 - 同儕平均
             delta_df = pd.DataFrame({
@@ -456,7 +456,7 @@ with right:
                 height=300, showlegend=False, margin=dict(l=10, r=10, t=40, b=10)
             )
             fig2.update_yaxes(zeroline=True, zerolinewidth=1)
-            grid_cols[(i * 2 + 1) % 4].plotly_chart(fig2, use_container_width=True)
+            grid_cols[(i * 2 + 1) % 4].plotly_chart(fig2, width='stretch')
     else:
         st.info("要看 vs 同儕平均與 Delta，請至少選 2 個群組。")
 
@@ -464,7 +464,7 @@ with right:
 # 8) 原始/聚合資料
 # =========================
 # with st.expander("查看聚合後的時序資料", expanded=False):
-#     st.dataframe(pivot, use_container_width=True)
+#     st.dataframe(pivot, width='stretch')
 with st.expander("查看原始資料（經清洗）", expanded=False):
     # 清理統計顯示
     if isinstance(stats, dict) and all(k in stats for k in ("orig_len", "deleted", "cleaned_len")) and stats["orig_len"]:
@@ -477,4 +477,4 @@ with st.expander("查看原始資料（經清洗）", expanded=False):
             language="text",
         )
     raw = df[(df["Registration"] >= start_date) & (df["Registration"] <= end_date)].copy()
-    st.dataframe(raw, use_container_width=True)
+    st.dataframe(raw, width='stretch')

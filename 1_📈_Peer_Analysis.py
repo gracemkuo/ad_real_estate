@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title="Abu Dhabi Real Estate — Peer Analysis",
-    page_icon=":chart_with_upwards_trend:",
+    page_icon="📈",
     layout="wide",
 )
 """
@@ -191,15 +191,16 @@ def load_data(file_path: str):
 # 預設路徑可改
 DATA_PATH = "data/data.xlsx"
 
-try:
-    df, stats = load_data(DATA_PATH)
-except Exception as e:
-    st.error(f"Failed to read file: {e}")
-    st.stop()
+with st.spinner("Loading and cleaning data..."):
+    try:
+        df, stats = load_data(DATA_PATH)
+    except Exception as e:
+        st.error(f"Failed to read file: {e}")
+        st.stop()
 
-if df.empty:
-    st.warning("Dataframe is empty. Please check the Excel file.")
-    st.stop()
+    if df.empty:
+        st.warning("Dataframe is empty. Please check the Excel file.")
+        st.stop()
 
 # =========================
 # 2) 頁面佈局：左側控制，右側結果
@@ -427,15 +428,16 @@ with right:
 # =========================
 with right:
     st.markdown("## Normalized trend (base=1)")
-    chart_df = normalized.reset_index().melt(id_vars="Date", var_name=group_dim, value_name="Normalized")
-    fig = px.line(
-        chart_df, x="Date", y="Normalized", color=group_dim,
-        height=420,
-        hover_data={group_dim: True, "Normalized": ":.3f", "Date": "|%Y-%m-%d"},
-    )
-    fig.update_yaxes(title=None)
-    fig.update_xaxes(title=None)
-    st.plotly_chart(fig, use_container_width=True)
+    with st.spinner("Generating chart..."):
+        chart_df = normalized.reset_index().melt(id_vars="Date", var_name=group_dim, value_name="Normalized")
+        fig = px.line(
+            chart_df, x="Date", y="Normalized", color=group_dim,
+            height=420,
+            hover_data={group_dim: True, "Normalized": ":.3f", "Date": "|%Y-%m-%d"},
+        )
+        fig.update_yaxes(title=None)
+        fig.update_xaxes(title=None)
+        st.plotly_chart(fig, width='stretch')
 
 # =========================
 # 7) 右側底部：個別 vs 同儕平均 + Delta（minus peer average）
@@ -466,7 +468,7 @@ with right:
             )
             fig1.update_yaxes(title=None, rangemode="tozero")
             fig1.update_xaxes(title=None)
-            grid_cols[(i * 2) % 4].plotly_chart(fig1, use_container_width=True)
+            grid_cols[(i * 2) % 4].plotly_chart(fig1, width='stretch')
 
             # (b) Delta：該群組 - 同儕平均
             delta_df = pd.DataFrame({
@@ -484,25 +486,11 @@ with right:
                 height=300, showlegend=False, margin=dict(l=10, r=10, t=40, b=10)
             )
             fig2.update_yaxes(zeroline=True, zerolinewidth=1)
-            grid_cols[(i * 2 + 1) % 4].plotly_chart(fig2, use_container_width=True)
+            grid_cols[(i * 2 + 1) % 4].plotly_chart(fig2, width='stretch')
     else:
         st.info("Select at least 2 groups to view vs peer average and delta.")
 
 # =========================
 # 8) 原始/聚合資料
 # =========================
-# with st.expander("查看聚合後的時序資料", expanded=False):
-#     st.dataframe(pivot, use_container_width=True)
-with st.expander("View raw data (cleaned)", expanded=False):
-    # 清理統計顯示
-    if isinstance(stats, dict) and all(k in stats for k in ("orig_len", "deleted", "cleaned_len")) and stats["orig_len"]:
-        st.code(
-            f"""
-               Original: {stats['orig_len']:,} rows
-               Deleted: {stats['deleted']:,} ({stats['deleted']/stats['orig_len']*100:.2f}%)
-               Kept: {stats['cleaned_len']:,} ({stats['cleaned_len']/stats['orig_len']*100:.2f}%)
-            """,
-            language="text",
-        )
-    raw = df[(df["Registration"] >= start_date) & (df["Registration"] <= end_date)].copy()
-    st.dataframe(raw, use_container_width=True)
+# Raw data has been moved to a separate page: pages/2_📊_Raw_Data.py
