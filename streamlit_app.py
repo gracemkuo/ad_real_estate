@@ -93,7 +93,7 @@ def load_data(file_path: str):
     # 現在 Price 和 Sold Area 都保證有值，可以安心計算
     if "Price (AED)" in df.columns and "Sold Area / GFA (sqm)" in df.columns:
         df["Rate_Calculated"] = df["Price (AED)"] / df["Sold Area / GFA (sqm)"]
-        
+
         # 新增驗證欄位：比較原始 Rate 和計算 Rate
         if "Rate (AED/sqm)" in df.columns:
             # 計算差異百分比
@@ -103,7 +103,7 @@ def load_data(file_path: str):
                 False  # 只要其中一個是空或都是空，都視為不匹配
             )
             df["Rate_Difference"] = df["Rate (AED/sqm)"] - df["Rate_Calculated"]
-            
+
             # 輸出不匹配的記錄統計
             mismatch_count = (~df["Rate_Match"]).sum()
             if mismatch_count > 0:
@@ -144,7 +144,7 @@ def load_data(file_path: str):
 
     if _group_col:
         print(f"🔍 Step 6: Outlier removal (grouped by {_group_col}, k=3.0)")
-        
+
         if "Rate (AED/sqm)" in df.columns:
             before_len = len(df)
             # Rate 的極值檢測
@@ -155,7 +155,7 @@ def load_data(file_path: str):
             if deleted > 0:
                 print(f"   ❌ Remove outliers in Rate (AED/sqm)")
                 print(f"      Deleted: {deleted:,} | Remaining: {len(df):,}")
-        
+
         if "Price (AED)" in df.columns:
             before_len = len(df)
             # Price 的極值檢測
@@ -165,7 +165,7 @@ def load_data(file_path: str):
             if deleted > 0:
                 print(f"   ❌ Remove outliers in Price (AED)")
                 print(f"      Deleted: {deleted:,} | Remaining: {len(df):,}")
-        
+
         print()
     
     cleaned_len = len(df)
@@ -209,7 +209,7 @@ left, right = st.columns([1, 3])
 # 左側控制欄位（資料概覽與參數設定）
 with left:
     st.markdown("### Data overview")
-    st.caption(f"Rows: {len(df):,}, Period: {df['Registration'].min().date()} → {df['Registration'].max().date()}")
+    st.caption(f"Rows: {len(df):,}, Period: {df['Registration'].min().date()} → {df['Registration'].max().date()}, Update frequency: Biweekly")
 
     group_dim = st.selectbox(
         "Peer group dimension",
@@ -217,12 +217,17 @@ with left:
         index=1
     )
 
-    metric = st.selectbox(
+    metric_display = st.selectbox(
         "Metric",
-        options=["Rate (AED/sqm)", "Price (AED)"],
+        options=["Rate (AED/sqft)", "Rate (AED/sqm)"],
         index=0,
-        help="Default: price per sqm; switch to total price for comparison."
+        help="Default: price per sqft; switch to sqm for comparison."
     )
+
+    # 映射到實際數據欄位 (底層都使用 sqm)
+    metric = "Rate (AED/sqm)"
+    # 記錄是否需要單位轉換
+    convert_to_sqft = (metric_display == "Rate (AED/sqft)")
 
     agg_fn_name = st.selectbox(
         "Aggregation",
@@ -239,9 +244,17 @@ with left:
 
     horizon_label = st.pills(
         "Time window",
-        options=["3M", "6M", "1Y", "3Y", "5Y", "Max"],
+        options=["1M", "3M", "6M", "1Y", "3Y", "5Y", "Max"],
         default="1Y",
     )
+
+    # 自定義日期選擇器 (始終顯示)
+    #st.markdown("#### Custom date range")
+    col1, col2 = st.columns(2)
+    with col1:
+        custom_start = st.date_input("Start date", value=None)
+    with col2:
+        custom_end = st.date_input("End date", value=None)
 
 # =========================
 # 3) 時間過濾與頻率轉換
@@ -275,7 +288,15 @@ agg_ts = to_freq(df, freq)
 
 # 時間視窗計算
 end_date = agg_ts["Date"].max()
-if horizon_label == "3M":
+
+# 優先使用自定義日期(如果兩個日期都有選擇)
+if custom_start is not None and custom_end is not None:
+    start_date = pd.Timestamp(custom_start)
+    end_date = pd.Timestamp(custom_end)
+# 否則使用 pills 選擇的時間範圍
+elif horizon_label == "1M":
+    start_date = end_date - pd.DateOffset(months=1)
+elif horizon_label == "3M":
     start_date = end_date - pd.DateOffset(months=3)
 elif horizon_label == "6M":
     start_date = end_date - pd.DateOffset(months=6)
@@ -285,10 +306,14 @@ elif horizon_label == "3Y":
     start_date = end_date - pd.DateOffset(years=3)
 elif horizon_label == "5Y":
     start_date = end_date - pd.DateOffset(years=5)
-else:
+else:  # Max
     start_date = agg_ts["Date"].min()
 
 agg_ts = agg_ts[(agg_ts["Date"] >= start_date) & (agg_ts["Date"] <= end_date)]
+
+# 如果用戶選擇 sqft,轉換單位 (1 sqm = 10.764 sqft)
+if convert_to_sqft:
+    agg_ts[metric] = agg_ts[metric] / 10.764
 
 # =========================
 # 4) 右側頂部：選擇群組與指標顯示
@@ -311,7 +336,7 @@ with right:
 
     # 關鍵字模式（不分大小寫）
     # 關鍵字列表（不分大小寫匹配）
-    default_pick = [
+    default_pick_candidates = [
         "Park View Residence, Al Saadiyat Island",
         "Saadiyat Grove - The Source Residences",
         "Saadiyat Grove - The Source Terraces",
@@ -328,6 +353,9 @@ with right:
             #     name for name in options
             #     if any(re.search(p, name, re.IGNORECASE) for p in patterns)
             # ]
+
+    # 只保留在當前時間範圍內存在的預設選項
+    default_pick = [item for item in default_pick_candidates if item in options]
 
     picked_groups = st.multiselect(
         f"Pick {group_dim} to compare",
@@ -390,7 +418,7 @@ with right:
 
     st.caption("""
     - How to read: normalization=1 is window start; final value 1.25 ≈ +25% over the window.
-    - Tip: prefer `Rate (AED/sqm)` with `median` to reduce luxury outlier skew.
+    - Tip: prefer `Rate (AED/sqft)` or `Rate (AED/sqm)` with `median` to reduce luxury outlier skew.
     - For a stricter peer set: filter by the same `District` or `Property Type`.
     """)
 
